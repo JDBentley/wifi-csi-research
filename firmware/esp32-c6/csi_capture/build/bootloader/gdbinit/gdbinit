@@ -1,0 +1,2 @@
+source /home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader/gdbinit/symbols
+source /home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader/gdbinit/connect

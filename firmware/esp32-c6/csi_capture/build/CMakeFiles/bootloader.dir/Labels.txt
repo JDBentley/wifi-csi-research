@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/CMakeFiles/bootloader
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/CMakeFiles/bootloader.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/CMakeFiles/bootloader-complete.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule

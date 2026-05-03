@@ -21,3 +21,29 @@ Thumbs.db
 # Secrets
 .env
 secrets/
+
+# =========================
+# ESP-IDF / Firmware
+# =========================
+
+# Build artifacts
+**/build/
+
+# SDK config backups
+sdkconfig.old
+
+# Local config (machine-specific)
+sdkconfig.local
+
+# Python environment (ESP-IDF)
+.python_env/
+
+# CMake cache
+CMakeFiles/
+CMakeCache.txt
+
+# VSCode (if you use it later)
+.vscode/
+
+# Temporary files
+*.log

@@ -1,0 +1,2 @@
+"-specs=/home/cerd/Developer/wifi-csi-research/firmware/esp32-c6/csi_capture/build/bootloader/specs/picolibc.specs"
+-march=rv32imac_zicsr_zifencei_zaamo_zalrsc
