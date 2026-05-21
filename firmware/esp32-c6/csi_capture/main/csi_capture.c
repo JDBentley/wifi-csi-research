@@ -10,6 +10,8 @@
 #include "freertos/task.h"
 #include "nvs_flash.h"
 
+#include "wifi_config.h"
+
 static const char *TAG = "CSI_CAPTURE";
 
 void csi_callback(void *ctx, wifi_csi_info_t *data) {
@@ -50,8 +52,8 @@ void wifi_init(void) {
 
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = "Verizon-R562L5-071F",
-            .password = "7176ff66",
+            .ssid = WIFI_SSID,
+            .password = WIFI_PASSWORD,
         },
     };
 
