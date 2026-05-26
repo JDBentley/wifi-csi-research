@@ -132,3 +132,23 @@ results/
 - **Adversarial RF stimulation** restricted to isolated home lab
 - **Defensible claims only** — all findings must be reproducible from documented data
 - **No ML** at current stage — threshold-based classification preserves interpretability and auditability
+
+## Future: Cellular Exfiltration Architecture
+
+[Planned, not implemented]
+
+Target architecture:
+- ESP32-C6 + SIM7600 LTE module
+- Local CSI buffering to SD card
+- Periodic upload to remote server via HTTP/MQTT
+- On-device classification reduces exfil bandwidth
+- SMS alerts for high-confidence detection events
+
+Dependencies:
+- Layer 3 (Intelligence) threshold detection must be complete
+- Power budget analysis for battery operation
+- SIM card cost modeling (data-only prepaid plan)
+
+Constraints:
+- Deployment restricted to authorized environments only
+- Exfil testing in isolated home lab before field use

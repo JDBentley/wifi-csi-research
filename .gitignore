@@ -21,6 +21,7 @@ Thumbs.db
 # Secrets
 .env
 secrets/
+wifi_config.h
 
 # =========================
 # ESP-IDF / Firmware

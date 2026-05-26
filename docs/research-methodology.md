@@ -182,3 +182,12 @@ Not yet implemented. Planned approach:
 - Analysis scripts version-controlled
 - Metadata recorded per run
 
+### Cellular Exfiltration (Future Work)
+
+Planned research direction: integrating SIM7600 LTE module for remote data exfiltration.
+
+**Operational constraints:**
+- Deployment restricted to authorized red team engagements only
+- Testing conducted in isolated home lab
+- Conference presentation focuses on defensive detection signatures
+- No public release of operational drop box firmware
