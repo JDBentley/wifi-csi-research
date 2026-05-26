@@ -2,58 +2,68 @@
 
 ## Overview
 
-This research is structured in three processing layers. Each layer has a defined scope, inputs, and outputs. Work progresses sequentially — a layer is not considered complete until its evidence requirements are met.
+This research is structured in three processing layers. Each layer has a defined scope, inputs, and outputs. Work progresses sequentially — a layer is not considered complete until its evidence requirements are met. Completion is not permanent: the discovery of a methodology artifact at any layer may require iteration before the layer is considered closed for downstream work.
 
 ```
 [Edge Processing] → [Temporal Analysis] → [Intelligence]
       ↓                     ↓                    ↓
   Raw CSI data        Variance / energy      Classification
   Timestamps          Environment comparison  Confidence scoring
-  RSSI                RF density analysis     Detection logic
+  RX metadata         RF density analysis     Detection logic
+  RSSI
 ```
 
 ---
 
 ## Layer 1 — Edge Processing
 
-**Status: COMPLETE**
+**Status: COMPLETE (v0.2.0 — iterated after firmware audit revealed methodology artifact)**
 
-**Scope:** Hardware configuration, CSI acquisition, structured logging, reproducible capture workflow.
+**Scope:** Hardware configuration, CSI acquisition, structured per-packet metadata logging, reproducible capture workflow.
 
 **Inputs:**
 - ESP32-C6 connected to WiFi network
 - Directed traffic to ESP32 IP (ping or equivalent)
 - Serial output captured via `tee` to CSV
 
-**Outputs:**
-- Raw CSI CSV files: `timestamp, RSSI, len, csi_0..csi_n`
-- Structured per-run metadata logs
+**Outputs (v0.2.0 schema):**
+- Raw CSI CSV files with per-packet header metadata:
+  `ts_us, rssi, rate, noise_floor, channel, second, cur_bb_format, sig_len, rx_state, rxend_state, n_csi_bytes, <iq bytes...>`
+- Structured per-run metadata logs (environment, firmware version, traffic method, people, doors, appliances)
 
-**Key finding at this layer:**
-CSI acquisition is traffic-dependent. Callbacks fire reliably only when directed traffic targets the ESP32. Passive ambient capture produces inconsistent or absent callbacks. This challenges assumptions in published CSI research conducted under controlled lab conditions and is the primary research differentiator.
+**Key findings at this layer:**
+
+1. **Traffic dependency.** CSI acquisition is traffic-dependent. Callbacks fire reliably only when directed traffic targets the ESP32. Passive ambient capture produces inconsistent or absent callbacks. This challenges assumptions in published CSI research conducted under controlled lab conditions.
+
+2. **Acquisition methodology is part of the result.** The initial v0.1.x firmware enabled all CSI acquisition flags by default, a configuration commonly seen in published CSI research code and reference implementations. This produced a reproducible bimodal baseline amplitude distribution that looked like environmental signal but was actually a firmware artifact: CSI extracted from frames with different buffer schemas being averaged together. Constraining acquisition to a single PHY format and filtering by per-packet metadata collapsed the apparent bimodality and reduced baseline variance by 46% under identical environmental conditions. The acquisition methodology is part of the result, not implementation detail.
 
 **Known limitations:**
-- Early firmware (hotel datasets) capped capture at 16 subcarriers (`i < 16`).
-  This was resolved prior to the placement experiment. All datasets from desk,
-  kitchen, and work_rf_dense use full subcarrier capture (`data->len`).
-  Hotel data is retained as documented v1 reference only.
-- Raw CSV files contain firmware log noise requiring filtering at analysis layer
-- Network topology and hotspot client isolation directly affect callback stability
+- Early hotel firmware (v0.1.0) capped capture at 16 subcarriers (`i < 16`). Resolved before the placement experiment.
+- All v0.1.x baseline captures (including the hotel datasets and the three preserved desk captures in `data/raw/desk_baseline_v01/`) contain the bimodality artifact. These are retained as the "before" half of the methodology comparison only — not used for cross-environment statistical claims.
+- Raw CSV files contain firmware log noise (boot messages, WiFi driver output) requiring filtering at the analysis layer.
+- Network topology and hotspot client isolation directly affect callback stability.
+- v0.2.0 link reality: this network's C6 negotiates 802.11n (HT), not Wi-Fi 6 (HE). HE-only acquisition produces zero captures on this network.
+- Findings are scoped to ESP32-C6 hardware under the documented firmware version. Generalization to other chips, SDKs, or network conditions requires independent validation.
 
 ---
 
 ## Layer 2 — Temporal Analysis
 
-**Status: IN PROGRESS**
+**Status: IN PROGRESS (v0.2.0 baseline validated; movement re-validation pending)**
 
 **Scope:** Signal energy extraction, environmental comparison, RF density analysis, repeatability testing.
 
 **Inputs:**
-- Raw CSI CSV files from Layer 1
-- Per-run metadata (environment, placement, conditions)
+- Raw CSI CSV files from Layer 1 (v0.2.0 schema)
+- Per-run metadata (environment, placement, conditions, firmware version)
+
+**Required pre-analysis filtering (v0.2.0):**
+- `rx_state == 0` (drop degraded receptions)
+- `n_csi_bytes == 128` (drop packets with non-standard CSI buffer size)
+- Document filter rate per capture; high filter rates indicate environmental or network issues worth flagging in metadata
 
 **Outputs:**
-- Per-run energy series
+- Per-run energy series (subject to filter rule above)
 - Summary statistics: mean, variance, std dev, min, max
 - Mean separation between capture conditions
 - Movement/Baseline std dev ratio
@@ -61,20 +71,21 @@ CSI acquisition is traffic-dependent. Callbacks fire reliably only when directed
 
 **Experiment: Placement and RF Density Comparison**
 
-Three environments × 5 runs × 10 minutes = 15 datasets.
+Three environments × 5 runs × 10 minutes = 15 datasets (v0.2.0 firmware only).
 
 | Environment | Description | Expected behavior |
 |---|---|---|
-| `desk` | Controlled home location | Most stable baseline |
+| `desk_active` | Controlled home location | Most stable baseline (validated under v0.2.0) |
 | `kitchen` | Alternate home location | Environmental drift from surfaces, appliances |
 | `work_rf_dense` | Office environment | Higher variance, RF density interference |
 
 Each run produces a `*_run_*.csv` file. Analysis script auto-discovers files by environment folder and generates per-environment plots and a cross-environment comparison.
 
 **Success criteria:**
-- 5 usable datasets per environment
+- 5 usable datasets per environment under v0.2.0 firmware
 - Visible stability or drift trend across environments
 - At least one documented limitation or anomaly per environment
+- Movement vs baseline separation re-validated under v0.2.0 (the v0.1.x energy separation may have been partially driven by the bimodality artifact rather than real movement)
 
 ---
 
@@ -86,7 +97,7 @@ Each run produces a `*_run_*.csv` file. Analysis script auto-discovers files by 
 
 **Inputs:**
 - Statistical summaries from Layer 2
-- Thresholds derived from baseline variance analysis
+- Thresholds derived from baseline variance analysis (filtered v0.2.0 data only)
 
 **Outputs:**
 - Classification model (threshold-based, not ML)
@@ -100,6 +111,9 @@ Each run produces a `*_run_*.csv` file. Analysis script auto-discovers files by 
 - Document false positive conditions (RF noise, appliance interference, environmental drift)
 - Map detection logic to WIDS integration opportunities
 
+**Dependencies:**
+- Layer 2 movement validation must complete under v0.2.0 firmware before Layer 3 thresholds are computed against the wrong baseline distribution.
+
 ---
 
 ## Data Flow
@@ -109,12 +123,16 @@ firmware/
 └── csi_capture.c           → serial output → tee → data/raw/{env}/*.csv
 
 data/raw/
-└── {environment}/
-    └── {capture_type}_{run}.csv
+├── hotel/                  (v0.1.0 datasets, 16-subcarrier firmware)
+├── desk_baseline_v01/      (v0.1.x desk runs, preserved as methodology evidence)
+├── desk_active/            (v0.2.0 captures going forward)
+├── kitchen/                (planned, v0.2.0 only)
+└── work_rf_dense/          (planned, v0.2.0 only)
 
 analysis/
 └── compare_baseline_movement.py
     ├── discovers data/raw/ by environment
+    ├── applies v0.2.0 filter rule (rx_state == 0 AND n_csi_bytes == 128)
     ├── auto-detects capture mode (baseline/movement or placement runs)
     └── writes results/figures/*.png
 
@@ -132,6 +150,7 @@ results/
 - **Adversarial RF stimulation** restricted to isolated home lab
 - **Defensible claims only** — all findings must be reproducible from documented data
 - **No ML** at current stage — threshold-based classification preserves interpretability and auditability
+- **Per-packet metadata logging required** — captures without `rx_state` and `n_csi_bytes` cannot be cleanly filtered and are not used for cross-environment statistical claims
 
 ## Future: Cellular Exfiltration Architecture
 
@@ -145,7 +164,7 @@ Target architecture:
 - SMS alerts for high-confidence detection events
 
 Dependencies:
-- Layer 3 (Intelligence) threshold detection must be complete
+- Layer 3 (Intelligence) threshold detection must be complete on v0.2.0-validated data
 - Power budget analysis for battery operation
 - SIM card cost modeling (data-only prepaid plan)
 
