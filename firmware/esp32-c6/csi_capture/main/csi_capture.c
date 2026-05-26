@@ -12,14 +12,34 @@
 
 #include "wifi_config.h"
 
+#define FIRMWARE_VERSION "0.2.0-csi-rxctrl"
+
 static const char *TAG = "CSI_CAPTURE";
 
 void csi_callback(void *ctx, wifi_csi_info_t *data) {
     int64_t timestamp = esp_timer_get_time();
+    wifi_pkt_rx_ctrl_t *rc = &data->rx_ctrl;
 
-    printf("CSI,%lld,%d,%d", timestamp, data->rx_ctrl.rssi, data->len);
+    /* C6 + HE: esp_wifi_rxctrl_t layout.
+     * No sig_mode/mcs/cwb/ant on this chip — they don't exist in the struct.
+     * cur_bb_format is the discriminator we actually want (RX_BB_FORMAT_*).
+     * noise_floor tests the AGC hypothesis directly.
+     */
+    printf("CSI,%lld,%d,%u,%d,%u,%u,%u,%u,%u,%u,%d",
+        timestamp,                  // local esp_timer_get_time()
+        rc->rssi,                   // dBm
+        rc->rate,                   // 5-bit PHY rate / L-SIG rate
+        rc->noise_floor,            // dBm
+        rc->channel,                // primary channel
+        rc->second,                 // secondary channel (HT40)
+        rc->cur_bb_format,          // 11B/11G/HT/VHT/HE_SU/HE_MU/HE_ERSU/HE_TB/VHT_MU
+        rc->sig_len,                // MPDU length incl FCS
+        rc->rx_state,               // 0 = success
+        rc->rxend_state,            // 0 = success
+        data->len                   // CSI buffer length in bytes
+    );
 
-    for (int i = 0; i < 16 && i < data->len; i++) {
+    for (int i = 0; i < data->len; i++) {
         printf(",%d", data->buf[i]);
     }
 
@@ -68,15 +88,24 @@ void wifi_init(void) {
 
     print_ip_info();
 
+    /* HE SU re-enabled to restore packet rate.
+    * v0.1.x had every flag on, mixing legacy/HT/HE/MU/DCM/beamformed/STBC
+    * into one stream. v0.2.x narrows to legacy + HE SU only, and
+    * cur_bb_format in rx_ctrl tells us which one each packet was.
+    * If bimodality persists with two cur_bb_format values, we've found it.
+    * If bimodality persists with a single cur_bb_format value, we have
+    * to look at rate/MCS or AGC variation within that format.
+    */
     wifi_csi_config_t csi_config = {
         .enable = true,
         .acquire_csi_legacy = true,
-        .acquire_csi_ht20 = true,
-        .acquire_csi_ht40 = true,
-        .acquire_csi_su = true,
-        .acquire_csi_mu = true,
-        .acquire_csi_dcm = true,
-        .acquire_csi_beamformed = true,
+        .acquire_csi_ht20 = true,        // <-- back on; this is what your link uses
+        .acquire_csi_ht40 = false,       // stay off; link is BW20
+        .acquire_csi_su = false,         // stay off; he:0
+        .acquire_csi_mu = false,
+        .acquire_csi_dcm = false,
+        .acquire_csi_beamformed = false,
+        .acquire_csi_he_stbc = 0,
         .val_scale_cfg = 0,
         .dump_ack_en = false,
     };
@@ -88,5 +117,6 @@ void wifi_init(void) {
 
 void app_main(void) {
     nvs_flash_init();
+    ESP_LOGI(TAG, "CSI capture firmware %s", FIRMWARE_VERSION);
     wifi_init();
 }
